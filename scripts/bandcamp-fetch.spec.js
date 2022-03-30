@@ -2,7 +2,7 @@
 const {test} = require('@playwright/test');
 const {getFreeAlbumsInPage} = require('../utils/browser.utils');
 const {saveAlbumsInFile} = require('../utils/fs.utils');
-const {mergeToCollection, waitFor} = require('../utils/object.utils');
+const {mergeToCollection, waitFor, runTimer} = require('../utils/object.utils');
 
 test.describe('Go To Bandcamp', () => {
   test('fetch available free albums', async ({page}) => {
@@ -13,6 +13,7 @@ test.describe('Go To Bandcamp', () => {
     const end = new Date().getTime() + (Number.parseInt(timeToSearch, 10) * 60 * 1000);
 
     console.log('searching, will stop at: ', new Date(end));
+    runTimer(new Date(end));
 
     do {
       const freeAlbums = await getFreeAlbumsInPage({page});

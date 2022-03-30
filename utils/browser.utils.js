@@ -20,8 +20,8 @@ const getFreeAlbumsInPage = async ({page}) => {
       continue;
     }
 
-    const price = priceText[0].replace(/Sold for /g, '');
-    const over = overText[0].replace(/ more than the min/g, '');
+    const price = priceText[0].replace(/[^0-9]/g, '');
+    const over = overText[0].replace(/[^0-9]/g, '');
 
     if (price === over) {
       const titleEl = await element.locator('.item-title');
@@ -62,29 +62,7 @@ const buyAlbum = async ({
       page.locator('text=Download Now').click(),
     ]);
 
-    const defaultQualityLabel = await page.locator('text=MP3 V0 ▾ >> div');
-    const defaultQualityLabelCount = await defaultQualityLabel.count();
-
-    if (defaultQualityLabelCount) {
-      await defaultQualityLabel.click();
-      await page.locator('text=MP3 320').click();
-    }
-
-    const [download] = await Promise.all([
-      page.waitForEvent('download'),
-      page.locator('a:has-text("Download")').click(),
-    ]);
-
-    console.log('will wait for', title);
-
-    const path = await download.path();
-
-    console.log('download for ', title, 'is done');
-
-    const sanitizedTitle = title.split('\n').join('-').replace(/[/.:,]/g, '').replace(/\\n| /g, '-');
-    console.log({title, path: `./downloads/${sanitizedTitle}.${url.includes('track') ? 'mp3' : 'zip'}`});
-
-    moveFile(path, `./downloads/${sanitizedTitle}.zip`);
+    await downloadAlbum({downloadPage: page, title, url});
   } else {
     console.log('must add email');
 
@@ -138,37 +116,54 @@ const getAlbumsFromEmail = async ({emailPage, context, mailAlbums}) => {
     await waitFor(30);
 
     await downloadAlbum({downloadPage, title, url});
-
-    const defaultQualityLabel = await downloadPage.locator('text=MP3 V0 ▾');
-    const defaultQualityLabelCount = await defaultQualityLabel.count();
-
-    console.log({defaultQualityLabelCount});
-
-    if (defaultQualityLabelCount) {
-      await defaultQualityLabel.click();
-      await downloadPage.locator('text=MP3 320').click();
-    }
-
-    const [download] = await Promise.all([
-      downloadPage.waitForEvent('download'),
-      downloadPage.locator('a:has-text("Download")').click(),
-    ]);
-
-    console.log('will wait for', title);
-
-    const path = await download.path();
-
-    console.log('download for ', title, 'is done');
-
-    const sanitizedTitle = title.split('\n').join('-').replace(/[/.:,]/g, '').replace(/\\n| /g, '-');
-    console.log({title, path: `./downloads/${sanitizedTitle}.${url.includes('track') ? 'mp3' : 'zip'}`});
-
-    moveFile(path, `./downloads/${sanitizedTitle}.zip`);
   }
+
+  return;
 };
 
 const downloadAlbum = async ({downloadPage, title, url}) => {
-  console.log({downloadPage, title, url});
+  const defaultQualityLabel = await downloadPage.locator('text=MP3 V0 ▾');
+  const defaultQualityLabelCount = await defaultQualityLabel.count();
+
+  console.log({defaultQualityLabelCount});
+
+  if (defaultQualityLabelCount) {
+    await defaultQualityLabel.click();
+    await downloadPage.locator('text=MP3 320').click();
+  }
+
+  const [download] = await Promise.all([
+    downloadPage.waitForEvent('download'),
+    downloadPage.locator('a:has-text("Download")').click(),
+  ]);
+
+  console.log('will wait for', title);
+
+  const path = await download.path();
+
+  const albumTitle = await getTextOfElement({page: downloadPage, query: '.download .title'});
+  let albumArtist = await getTextOfElement({page: downloadPage, query: '.download .artist'});
+
+  albumArtist = albumArtist.replace('by ', '');
+
+  const realTitle = `${albumArtist}-${albumTitle}`;
+  console.log('download for ', realTitle, 'is done', {albumArtist, albumTitle});
+
+  const sanitizedTitle = realTitle.split('\n').join('-').replace(/[/.:,]/g, '').replace(/\\n| /g, '-');
+  console.log({realTitle, path: `./downloads/${sanitizedTitle}.${url.includes('track') ? 'mp3' : 'zip'}`});
+
+  moveFile(path, `./downloads/${sanitizedTitle}.zip`);
+};
+
+const getTextOfElement = async ({page, query}) => {
+  if (!page || !query) {
+    console.error('no page or query when searching for', {query, page});
+  }
+  const el = await page.locator(query);
+  const texts = await el.allInnerTexts();
+  const text = texts[0];
+
+  return text;
 };
 
 module.exports = {
