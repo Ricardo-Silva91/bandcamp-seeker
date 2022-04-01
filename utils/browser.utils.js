@@ -31,7 +31,7 @@ const getFreeAlbumsInPage = async ({page}) => {
 
       freeAlbums.push({
         title: titleTexts[0],
-        url: `https:${linkUrl}`,
+        url: linkUrl.includes('https:') ? linkUrl : `https:${linkUrl}`,
       });
     }
   }
