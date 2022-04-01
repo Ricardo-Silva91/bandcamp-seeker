@@ -1,5 +1,5 @@
 const {moveFile} = require('./fs.utils');
-const {waitFor} = require('./object.utils');
+const {waitFor, log} = require('./object.utils');
 
 const getFreeAlbumsInPage = async ({page}) => {
   const freeAlbums = [];
@@ -49,11 +49,17 @@ const buyAlbum = async ({
   try {
     await page.goto(url);
   } catch (error) {
-    console.log('error navigating to', {url});
+    log('error navigating to', {url});
     return result;
   }
 
   waitFor(5);
+
+  const priceLabelText = await getTextOfElement({page, query: '.buyItemExtra.buyItemNyp.secondaryText'});
+  if (priceLabelText !== 'name your price') {
+    log('album is not free 😢');
+    return result;
+  }
 
   await page.locator('.buyItem.digital .main-button .download-link.buy-link').click();
   let userPriceEl = await page.locator('#userPrice');
@@ -66,9 +72,9 @@ const buyAlbum = async ({
     userPriceEl = await page.locator('#userPrice');
     userPriceCount = await userPriceEl.count();
 
-    console.log({userPriceCount});
+    log({userPriceCount});
 
-    waitFor(1);
+    await waitFor(1);
   }
 
   await page.locator('#userPrice').click();
@@ -86,7 +92,7 @@ const buyAlbum = async ({
 
     await downloadAlbum({downloadPage: page, title, url});
   } else {
-    console.log('must add email');
+    log('must add email');
 
     result.mailAlbum = true;
 
@@ -100,10 +106,11 @@ const buyAlbum = async ({
 };
 
 const getAlbumsFromEmail = async ({emailPage, context, mailAlbums}) => {
-  console.log('getting mailed albums');
+  log('getting mailed albums');
 
   let emailAnchors = await emailPage.locator('a:has-text("Your download from")');
   let emailAnchorsCount = await emailAnchors.count();
+  log({emailAnchorsCount, mailAlbums: mailAlbums.length});
 
   while (emailAnchorsCount < mailAlbums.length) {
     await waitFor(30);
@@ -113,7 +120,7 @@ const getAlbumsFromEmail = async ({emailPage, context, mailAlbums}) => {
     emailAnchors = await emailPage.locator('a:has-text("Your download from")');
     emailAnchorsCount = await emailAnchors.count();
 
-    console.log({emailAnchorsCount, mailAlbums: mailAlbums.length});
+    log({emailAnchorsCount, mailAlbums: mailAlbums.length});
   }
 
   for (let index = 0; index < emailAnchorsCount; index += 1) {
@@ -121,7 +128,29 @@ const getAlbumsFromEmail = async ({emailPage, context, mailAlbums}) => {
     const {title} = mailAlbums[index];
     const {url} = mailAlbums[index];
 
+    log({anchor});
+
     await anchor.click();
+
+    let tabA = await emailPage.locator('#tab1 a');
+    let tabACount = await tabA.count();
+
+    log('waiting', {tabACount});
+
+    let count = 0;
+    while (count !== 3 && tabACount === 0) {
+      count = count + 1;
+
+      await anchor.click();
+
+      tabA = await emailPage.locator('#tab1 a');
+      tabACount = await tabA.count();
+
+      log('waiting', {tabACount});
+
+      await waitFor(1);
+    }
+
     const [downloadPage] = await Promise.all([
       context.waitForEvent('page'),
       emailPage.locator('#tab1 a').first().click(),
@@ -130,18 +159,20 @@ const getAlbumsFromEmail = async ({emailPage, context, mailAlbums}) => {
     await waitFor(5);
 
     await downloadAlbum({downloadPage, title, url});
+
+    await downloadPage.close();
   }
 
   return;
 };
 
 const downloadAlbum = async ({downloadPage, title, url}) => {
-  console.log('downloading', title);
+  log('downloading', title);
 
   const defaultQualityLabel = await downloadPage.locator('text=MP3 V0 ▾');
   const defaultQualityLabelCount = await defaultQualityLabel.count();
 
-  console.log({defaultQualityLabelCount});
+  log({defaultQualityLabelCount});
 
   if (defaultQualityLabelCount) {
     await defaultQualityLabel.click();
@@ -150,10 +181,10 @@ const downloadAlbum = async ({downloadPage, title, url}) => {
 
   const [download] = await Promise.all([
     downloadPage.waitForEvent('download'),
-    downloadPage.locator('a:has-text("Download")').click(),
+    downloadPage.locator('.download a.item-button').click(),
   ]);
 
-  console.log('will wait for', title);
+  log('will wait for', title);
 
   const path = await download.path();
 
@@ -163,10 +194,10 @@ const downloadAlbum = async ({downloadPage, title, url}) => {
   albumArtist = albumArtist.replace('by ', '');
 
   const realTitle = `${albumArtist}-${albumTitle}`;
-  console.log('download for ', realTitle, 'is done', {albumArtist, albumTitle});
+  log('download for ', realTitle, 'is done', {albumArtist, albumTitle});
 
-  const sanitizedTitle = realTitle.split('\n').join('-').replace(/[/.:,]/g, '').replace(/\\n| /g, '-');
-  console.log({realTitle, path: `./downloads/${sanitizedTitle}.${url.includes('track') ? 'mp3' : 'zip'}`});
+  const sanitizedTitle = realTitle.split('\n').join('-').replace(/[/.:,"()]/g, '').replace(/\\n| /g, '-');
+  log({realTitle, path: `./downloads/${sanitizedTitle}.${url.includes('track') ? 'mp3' : 'zip'}`});
 
   moveFile(path, `./downloads/${sanitizedTitle}.zip`);
 };
@@ -197,7 +228,7 @@ const keepTempMailAlive = async ({page}) => {
         await waitFor(30);
 
         if (time === '00') {
-          console.log('need 10 more minutes');
+          log('need 10 more minutes');
           const moreTimeEl = await page.locator('text=Give me 10 more minutes!');
           const moreTimeElCount = await moreTimeEl.count();
 
@@ -209,7 +240,7 @@ const keepTempMailAlive = async ({page}) => {
         }
       }
     } catch (error) {
-      console.log('quitting temp mail keepalive');
+      log('quitting temp mail keepalive');
     }
   }
 

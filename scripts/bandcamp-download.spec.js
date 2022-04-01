@@ -2,7 +2,7 @@
 const {test} = require('@playwright/test');
 const {buyAlbum, getAlbumsFromEmail, keepTempMailAlive} = require('../utils/browser.utils');
 const {readFilesInDataDir} = require('../utils/fs.utils');
-const {mergeToCollection} = require('../utils/object.utils');
+const {mergeToCollection, log} = require('../utils/object.utils');
 
 test.describe('Go To Bandcamp', () => {
   test('download free albums', async ({page, context}) => {
@@ -13,12 +13,22 @@ test.describe('Go To Bandcamp', () => {
     const emailPage = await context.newPage();
 
     await emailPage.goto('https://10minutemail.net/');
-    await emailPage.locator('a[href="more.html"]').click();
+    // await emailPage.locator('a[href="more.html"]').click();
+
+    emailPage.on('popup', async (popup) => {
+      const popupTitle = await popup.title();
+
+      log('email page popup', {popupTitle});
+
+      if (popupTitle !== 'Bandcamp') {
+        await popup.close();
+      }
+    });
 
     const tempMail = await emailPage.inputValue('#fe_text');
     keepTempMailAlive({page: emailPage});
 
-    console.log({tempMail});
+    log({tempMail});
 
     const files = readFilesInDataDir();
     let collection = files[0];
@@ -27,7 +37,7 @@ test.describe('Go To Bandcamp', () => {
       collection = mergeToCollection({collection: collection, newAlbums: files[i]});
     }
 
-    console.log({collection});
+    log({collection});
 
     for (const album of collection) {
       const buyAlbumResult = await buyAlbum({page, title: album.title, url: album.url, tempMail});

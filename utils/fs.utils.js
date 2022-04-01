@@ -1,4 +1,5 @@
 const fs = require('fs');
+const { log } = require('./object.utils');
 
 const saveAlbumsInFile = (albums) => {
   const timestamp = new Date().getTime();
@@ -21,7 +22,7 @@ const readFilesInDataDir = () => {
     result.push(JSON.parse(fileContent));
   }
 
-  console.log({result});
+  log({result});
 
   return result;
 };
@@ -30,7 +31,7 @@ const moveFile = (src, dest) => {
   if (fs.existsSync(src)) {
     fs.renameSync(src, dest);
   } else {
-    console.log('file ', src, 'does not exist 😢');
+    log('file ', src, 'does not exist 😢');
   }
 };
 

@@ -1,7 +1,7 @@
 const mergeToCollection = ({collection, newAlbums}) => {
   for (const album of newAlbums) {
     if (!collection.find((el) => el.title === album.title)) {
-      console.log('new free album found 🚀', {album});
+      log('new free album found 🚀', {album});
       collection.push(album);
     }
   }
@@ -19,7 +19,7 @@ const runTimer = async (end) => {
   let now = new Date();
 
   while (end.getTime() > now.getTime()) {
-    console.log((end.getTime() - now.getTime()) / 1000, 'seconds until quitting');
+    log((end.getTime() - now.getTime()) / 1000, 'seconds until quitting');
 
     await waitFor(60);
     now = new Date();
@@ -28,8 +28,18 @@ const runTimer = async (end) => {
   return;
 };
 
+const log = (...arguments) => {
+  const dev = process.env.DEV;
+  const args = arguments;
+
+  if (dev) {
+    console.log(...args);
+  }
+};
+
 module.exports = {
   mergeToCollection,
   waitFor,
   runTimer,
+  log,
 };
