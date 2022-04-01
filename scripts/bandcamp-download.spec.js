@@ -1,11 +1,11 @@
 // @ts-check
 const {test} = require('@playwright/test');
-const {buyAlbum, getAlbumsFromEmail} = require('../utils/browser.utils');
+const {buyAlbum, getAlbumsFromEmail, keepTempMailAlive} = require('../utils/browser.utils');
 const {readFilesInDataDir} = require('../utils/fs.utils');
 const {mergeToCollection} = require('../utils/object.utils');
 
 test.describe('Go To Bandcamp', () => {
-  test('seek free albums', async ({page, context}) => {
+  test('download free albums', async ({page, context}) => {
     test.setTimeout(60 * 60 * 1000);
 
     const mailAlbums = [];
@@ -16,6 +16,7 @@ test.describe('Go To Bandcamp', () => {
     await emailPage.locator('a[href="more.html"]').click();
 
     const tempMail = await emailPage.inputValue('#fe_text');
+    keepTempMailAlive({page: emailPage});
 
     console.log({tempMail});
 
@@ -35,7 +36,7 @@ test.describe('Go To Bandcamp', () => {
         mailAlbums.push({title: album.title, url: album.url});
       }
 
-      await emailPage.locator('a[href="more.html"]').click();
+      // await emailPage.locator('a[href="more.html"]').click();
     }
 
     await getAlbumsFromEmail({emailPage, context, mailAlbums});

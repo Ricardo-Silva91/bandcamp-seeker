@@ -46,9 +46,31 @@ const buyAlbum = async ({
     mailAlbum: false,
   };
 
-  await page.goto(url);
+  try {
+    await page.goto(url);
+  } catch (error) {
+    console.log('error navigating to', {url});
+    return result;
+  }
+
+  waitFor(5);
 
   await page.locator('.buyItem.digital .main-button .download-link.buy-link').click();
+  let userPriceEl = await page.locator('#userPrice');
+  let userPriceCount = await userPriceEl.count();
+
+  let count = 0;
+  while (count !== 3 && userPriceCount === 0) {
+    count = count + 1;
+    await page.locator('.buyItem.digital .main-button .download-link.buy-link').click();
+    userPriceEl = await page.locator('#userPrice');
+    userPriceCount = await userPriceEl.count();
+
+    console.log({userPriceCount});
+
+    waitFor(1);
+  }
+
   await page.locator('#userPrice').click();
   await page.locator('#userPrice').fill('0');
   await page.locator('text=download to your computer').click();
@@ -84,17 +106,9 @@ const getAlbumsFromEmail = async ({emailPage, context, mailAlbums}) => {
   let emailAnchorsCount = await emailAnchors.count();
 
   while (emailAnchorsCount < mailAlbums.length) {
-    const timeEl = await emailPage.locator('#time');
-    const timeTexts = await timeEl.allInnerTexts();
-    const time = timeTexts[0].split(':')[0];
-
     await waitFor(30);
 
-    if (time === '00') {
-      await emailPage.locator('text=Give me 10 more minutes!').click();
-    } else {
-      await emailPage.locator('text=Refresh this page.').click();
-    }
+    await emailPage.locator('text=Refresh this page.').click();
 
     emailAnchors = await emailPage.locator('a:has-text("Your download from")');
     emailAnchorsCount = await emailAnchors.count();
@@ -113,7 +127,7 @@ const getAlbumsFromEmail = async ({emailPage, context, mailAlbums}) => {
       emailPage.locator('#tab1 a').first().click(),
     ]);
 
-    await waitFor(30);
+    await waitFor(5);
 
     await downloadAlbum({downloadPage, title, url});
   }
@@ -122,6 +136,8 @@ const getAlbumsFromEmail = async ({emailPage, context, mailAlbums}) => {
 };
 
 const downloadAlbum = async ({downloadPage, title, url}) => {
+  console.log('downloading', title);
+
   const defaultQualityLabel = await downloadPage.locator('text=MP3 V0 ▾');
   const defaultQualityLabelCount = await defaultQualityLabel.count();
 
@@ -166,8 +182,43 @@ const getTextOfElement = async ({page, query}) => {
   return text;
 };
 
+const keepTempMailAlive = async ({page}) => {
+  let timeElCount = 1;
+
+  while (timeElCount !== 0 && page) {
+    try {
+      const timeEl = await page.locator('#time');
+      timeElCount = await timeEl.count();
+
+      if (timeElCount !== 0) {
+        const timeTexts = await timeEl.allInnerTexts();
+        const time = timeTexts[0].split(':')[0];
+
+        await waitFor(30);
+
+        if (time === '00') {
+          console.log('need 10 more minutes');
+          const moreTimeEl = await page.locator('text=Give me 10 more minutes!');
+          const moreTimeElCount = await moreTimeEl.count();
+
+          if (moreTimeElCount === 1) {
+            moreTimeEl.click();
+          } else {
+            return;
+          }
+        }
+      }
+    } catch (error) {
+      console.log('quitting temp mail keepalive');
+    }
+  }
+
+  return;
+};
+
 module.exports = {
   getFreeAlbumsInPage,
   buyAlbum,
   getAlbumsFromEmail,
+  keepTempMailAlive,
 };

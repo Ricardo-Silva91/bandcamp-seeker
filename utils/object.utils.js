@@ -19,7 +19,7 @@ const runTimer = async (end) => {
   let now = new Date();
 
   while (end.getTime() > now.getTime()) {
-    console.log((end.getTime() - now.getTime()) / 1000, 'seconds untill quitting');
+    console.log((end.getTime() - now.getTime()) / 1000, 'seconds until quitting');
 
     await waitFor(60);
     now = new Date();
