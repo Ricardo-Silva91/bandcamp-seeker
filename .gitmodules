@@ -1,0 +1,6 @@
+[submodule "scripts/playwright-helpers"]
+	path = scripts/playwright-helpers
+	url = https://github.com/Ricardo-Silva91/playwright-helpers.git
+[submodule "utils/playwright-helpers"]
+	path = utils/playwright-helpers
+	url = https://github.com/Ricardo-Silva91/playwright-helpers.git
