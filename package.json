@@ -5,8 +5,10 @@
   "main": "index.js",
   "scripts": {
     "test": "npx playwright test --headed",
-    "seek": "npx playwright test scripts/bandcamp-fetch.spec.js --headed",
-    "download": "npx playwright test scripts/bandcamp-download.spec.js --headed",
+    "seek": "npx playwright test scripts/bandcamp-fetch.spec.js",
+    "download": "npx playwright test scripts/bandcamp-download.spec.js",
+    "seek-headed": "npx playwright test scripts/bandcamp-fetch.spec.js --headed",
+    "download-headed": "npx playwright test scripts/bandcamp-download.spec.js --headed",
     "test-headless": "npx playwright test",
     "record": "playwright codegen --target javascript -o example.js https://bandcamp.com/",
     "lint": "npx eslint --fix scripts/** utils/**"
