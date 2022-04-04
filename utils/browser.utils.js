@@ -1,5 +1,6 @@
 const {moveFile} = require('./fs.utils');
 const {waitFor, log} = require('./object.utils');
+const {getTextOfElement} = require('./playwright-helpers');
 
 const getFreeAlbumsInPage = async ({page}) => {
   const freeAlbums = [];
@@ -11,26 +12,29 @@ const getFreeAlbumsInPage = async ({page}) => {
   for (let index = 0; index < soldAlbumsCount; index += 1) {
     const element = await soldAlbums.nth(index);
 
-    const priceEl = await element.locator('.item-price');
-    const priceText = await priceEl.allInnerTexts();
-    const overEl = await element.locator('.item-over');
-    const overText = await overEl.allInnerTexts();
+    // const priceEl = await element.locator('.item-price');
+    // const priceText = await priceEl.allInnerTexts();
+    const priceText = await getTextOfElement({page: element, query: '.item-price'});
+    // const overEl = await element.locator('.item-over');
+    // const overText = await overEl.allInnerTexts();
+    const overText = await getTextOfElement({page: element, query: '.item-over'});
 
-    if (!priceText.length || !overText.length) {
+    if (!priceText || !overText) {
       continue;
     }
 
-    const price = priceText[0].replace(/[^0-9]/g, '');
-    const over = overText[0].replace(/[^0-9]/g, '');
+    const price = priceText.replace(/[^0-9]/g, '');
+    const over = overText.replace(/[^0-9]/g, '');
 
     if (price === over) {
-      const titleEl = await element.locator('.item-title');
-      const titleTexts = await titleEl.allInnerTexts();
+      // const titleEl = await element.locator('.item-title');
+      // const titleTexts = await titleEl.allInnerTexts();
+      const titleText = await getTextOfElement({page: element, query: '.item-title'});
       const linkEl = await element.locator('a.item-inner');
       const linkUrl = await linkEl.getAttribute('href');
 
       freeAlbums.push({
-        title: titleTexts[0],
+        title: titleText,
         url: linkUrl.includes('https:') ? linkUrl : `https:${linkUrl}`,
       });
     }
@@ -202,17 +206,6 @@ const downloadAlbum = async ({downloadPage, title, url}) => {
   moveFile(path, `./downloads/${sanitizedTitle}.zip`);
 };
 
-const getTextOfElement = async ({page, query}) => {
-  if (!page || !query) {
-    console.error('no page or query when searching for', {query, page});
-  }
-  const el = await page.locator(query);
-  const texts = await el.allInnerTexts();
-  const text = texts[0];
-
-  return text;
-};
-
 const keepTempMailAlive = async ({page}) => {
   let timeElCount = 1;
 
@@ -222,8 +215,9 @@ const keepTempMailAlive = async ({page}) => {
       timeElCount = await timeEl.count();
 
       if (timeElCount !== 0) {
-        const timeTexts = await timeEl.allInnerTexts();
-        const time = timeTexts[0].split(':')[0];
+        // const timeTexts = await timeEl.allInnerTexts();
+        const timeText = await getTextOfElement({page, query: '#time'});
+        const time = timeText.split(':')[0];
 
         await waitFor(30);
 
