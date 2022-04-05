@@ -150,15 +150,38 @@ const getAlbumsFromEmail = async ({emailPage, context, mailAlbums}) => {
       tabA = await emailPage.locator('#tab1 a');
       tabACount = await tabA.count();
 
-      log('waiting', {tabACount});
+      const adsEl = await emailPage.locator('.adsbygoogle.adsbygoogle-noablate');
+      const adsElCount = await adsEl.count();
+
+      if (adsElCount > 1) {
+        await removeAdsElements({
+          page: emailPage, elements: adsEl, elementsCount: adsElCount,
+        });
+      }
 
       await waitFor(1);
     }
 
-    const [downloadPage] = await Promise.all([
-      context.waitForEvent('page'),
-      emailPage.locator('#tab1 a').first().click(),
-    ]);
+    let downloadPageIsRight = false;
+    let downloadPage = undefined;
+
+    while (!downloadPageIsRight) {
+      [downloadPage] = await Promise.all([
+        context.waitForEvent('page'),
+        emailPage.locator('#tab1 a').first().click(),
+      ]);
+
+      const downloadPageTitle = await downloadPage.title();
+
+      downloadPageIsRight = downloadPageTitle === 'Bandcamp';
+
+      log({downloadPageTitle, downloadPageIsRight});
+
+      if (!downloadPageIsRight) {
+        await downloadPage.close();
+      }
+    }
+
 
     await waitFor(5);
 
@@ -221,10 +244,14 @@ const keepTempMailAlive = async ({page}) => {
 
         await waitFor(30);
 
+        log('\nminutes left on mail:', time, '\n');
+
         if (time === '00') {
           log('need 10 more minutes');
           const moreTimeEl = await page.locator('text=Give me 10 more minutes!');
           const moreTimeElCount = await moreTimeEl.count();
+
+          log({moreTimeElCount});
 
           if (moreTimeElCount === 1) {
             moreTimeEl.click();
@@ -239,6 +266,15 @@ const keepTempMailAlive = async ({page}) => {
   }
 
   return;
+};
+
+const removeAdsElements = async ({page, elements, elementsCount}) => {
+  log('will remove ads', {elementsCount});
+
+  // eslint-disable-next-line max-len
+  await page.frameLocator('iframe[name="aswift_4"]').frameLocator('iframe[name="ad_iframe"]').locator('[aria-label="Close ad"]').click();
+
+  log('clicked all', elementsCount, 'ads');
 };
 
 module.exports = {

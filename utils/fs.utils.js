@@ -1,5 +1,5 @@
 const fs = require('fs');
-const { log } = require('./object.utils');
+const {log} = require('./object.utils');
 
 const saveAlbumsInFile = (albums) => {
   const timestamp = new Date().getTime();

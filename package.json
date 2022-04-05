@@ -11,7 +11,7 @@
     "download-headed": "npx playwright test scripts/bandcamp-download.spec.js --headed",
     "test-headless": "npx playwright test",
     "record": "playwright codegen --target javascript -o example.js https://bandcamp.com/",
-    "lint": "npx eslint --fix scripts/** utils/**"
+    "lint": "npx eslint --fix scripts/**.js utils/**.js"
   },
   "author": "",
   "license": "ISC",
